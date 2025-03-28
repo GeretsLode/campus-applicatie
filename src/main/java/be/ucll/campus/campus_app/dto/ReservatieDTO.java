@@ -12,9 +12,11 @@ public class ReservatieDTO {
     private KlantDTO gebruiker;
     private String campusNaam;
     private List<LokaalDTO> lokalen;
+    private int totaleCapaciteit;
+
 
     // Constructor
-    public ReservatieDTO(Long id, LocalDateTime startTijd, LocalDateTime eindTijd, String commentaar, KlantDTO gebruiker, String campusNaam, List<LokaalDTO> lokalen ) {
+    public ReservatieDTO(Long id, LocalDateTime startTijd, LocalDateTime eindTijd, String commentaar, KlantDTO gebruiker, String campusNaam, List<LokaalDTO> lokalen,int totaleCapaciteit) {
         this.id = id;
         this.startTijd = startTijd;
         this.eindTijd = eindTijd;
@@ -22,6 +24,7 @@ public class ReservatieDTO {
         this.gebruiker = gebruiker;
         this.campusNaam = campusNaam;
         this.lokalen = lokalen;
+        this.totaleCapaciteit = totaleCapaciteit;
     }
 
     // Conversiemethode van entity naar DTO
@@ -33,6 +36,9 @@ public class ReservatieDTO {
         List<LokaalDTO> lokaalDTOs = reservatie.getLokalen().stream()
                 .map(rl -> LokaalDTO.fromLokaal(rl.getLokaal()))
                 .toList();
+        int totaleCapaciteit = reservatie.getLokalen().stream()
+                .mapToInt(rl -> rl.getLokaal().getCapaciteit())
+                .sum();
         return new ReservatieDTO(
                 reservatie.getId(),
                 reservatie.getStartTijd(),
@@ -40,7 +46,8 @@ public class ReservatieDTO {
                 reservatie.getCommentaar(),
                 KlantDTO.fromUser(reservatie.getGebruiker()),
                 campusNaam,
-                lokaalDTOs
+                lokaalDTOs,
+                totaleCapaciteit
         );
     }
 
@@ -54,4 +61,5 @@ public class ReservatieDTO {
     public String getCommentaar() { return commentaar; }
     public KlantDTO getGebruiker() { return gebruiker; }
     public List<LokaalDTO> getLokalen() { return lokalen; }
+    public int getTotaleCapaciteit() { return totaleCapaciteit; }
 }

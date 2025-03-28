@@ -28,6 +28,8 @@ class CampusAppApplicationTests {
 
 	@Autowired
 	private MockMvc mockMvc;
+	@Autowired
+	private CampusRepository campusRepository;
 
 	@Test
 	void contextLoads() {
@@ -35,6 +37,9 @@ class CampusAppApplicationTests {
 
 	@Test
 	void testCampusAanmakenViaApi() throws Exception {
+		// Verwijder eventuele oude testcampus
+		campusRepository.deleteById("TESTCAMPUS");
+
 		String json = "{\"naam\":\"TESTCAMPUS\",\"adres\":\"Teststraat 1\",\"parkeerplaatsen\":20}";
 
 		mockMvc.perform(post("/campus")
@@ -44,6 +49,9 @@ class CampusAppApplicationTests {
 				.andExpect(jsonPath("$.naam").value("TESTCAMPUS"))
 				.andExpect(jsonPath("$.adres").value("Teststraat 1"))
 				.andExpect(jsonPath("$.parkeerplaatsen").value(20));
+
+		// Ruim de rommel terug op
+		campusRepository.deleteById("TESTCAMPUS");
 	}
 
 	@Test

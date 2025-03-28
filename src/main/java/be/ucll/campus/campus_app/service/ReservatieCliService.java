@@ -76,7 +76,8 @@ public class ReservatieCliService {
 
             System.out.println("Reservaties:");
             for (ReservatieDTO r : reservaties) {
-                System.out.printf("- ID %d: %s → %s (campus: %s)%n", r.id, r.startTijd, r.eindTijd, r.campusNaam);
+                System.out.printf("- ID %d: %s → %s (campus: %s, capaciteit: %d personen)%n",
+                        r.id, r.startTijd, r.eindTijd, r.campusNaam, r.totaleCapaciteit);
                 if (r.lokalen != null && r.lokalen.length > 0) {
                     for (LokaalDTO l : r.lokalen) {
                         System.out.printf("    * Lokaal %s (ID %d, capaciteit %d)%n", l.naam, l.id, l.capaciteit);
@@ -171,7 +172,6 @@ public class ReservatieCliService {
                 return;
             }
 
-
             // === 4. Beschikbare lokalen ophalen ===
             List<LokaalDTO> beschikbareLokalen = webClient.get()
                     .uri(uriBuilder -> uriBuilder
@@ -205,11 +205,18 @@ public class ReservatieCliService {
                 return;
             }
 
-            // === 5. Reservatie aanmaken ===
-            String requestBody = String.format(
-                    "{\"startTijd\":\"%s\", \"eindTijd\":\"%s\", \"commentaar\":\"Geen commentaar\"}",
-                    start, eind
-            );
+            // === 5. Commentaar vragen ===
+            System.out.print("Eventueel commentaar (druk Enter voor leeg): ");
+            String commentaar = scanner.nextLine().trim();
+            if (commentaar.isEmpty()) {
+                commentaar = "Geen commentaar";
+            } else if (commentaar.length() > 255) {
+                System.out.println("Commentaar te lang (max. 255 tekens).");
+                return;
+            }
+
+            // === 6. Reservatie aanmaken ===
+            ReservatieAanvraagDTO aanvraag = new ReservatieAanvraagDTO(start, eind, commentaar);
 
             Optional<String> response = Optional.ofNullable(webClient.post()
                     .uri(uriBuilder -> uriBuilder
@@ -219,7 +226,7 @@ public class ReservatieCliService {
                                     .collect(Collectors.joining(",")))
                             .build())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestBody)
+                    .bodyValue(aanvraag)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block());
@@ -289,8 +296,8 @@ public class ReservatieCliService {
 
             System.out.println("Geplande reservaties:");
             toekomst.forEach(r -> {
-                System.out.printf("- ID %d: %s → %s, lokalen: ",
-                        r.id, r.startTijd, r.eindTijd);
+                System.out.printf("- ID %d: %s → %s, capaciteit: %d personen, lokalen: ",
+                        r.id, r.startTijd, r.eindTijd, r.totaleCapaciteit);
                 if (r.lokalen != null && r.lokalen.length > 0) {
                     String lijst = Arrays.stream(r.lokalen)
                             .map(l -> l.naam)
@@ -490,7 +497,8 @@ public class ReservatieCliService {
             }
 
             System.out.println("Reservaties van gebruiker:");
-            reservaties.forEach(r -> System.out.printf("- ID %d: %s → %s%n", r.id, r.startTijd, r.eindTijd));
+            reservaties.forEach(r -> System.out.printf("- ID %d: %s → %s (capaciteit: %d personen)%n",
+                    r.id, r.startTijd, r.eindTijd, r.totaleCapaciteit));
 
             System.out.print("Reservatie ID (uit bovenstaande lijst): ");
             String reservatieInput = scanner.nextLine().trim();
@@ -636,7 +644,8 @@ public class ReservatieCliService {
             } else {
                 System.out.println("Reservaties voor lokaal " + lokaalId + " in campus " + campus + ":");
                 reservaties.forEach(r ->
-                        System.out.printf("- ID %d: %s → %s%n", r.id, r.startTijd, r.eindTijd)
+                        System.out.printf("- ID %d: %s → %s (capaciteit: %d personen)%n",
+                                r.id, r.startTijd, r.eindTijd, r.totaleCapaciteit)
                 );
             }
 
@@ -652,6 +661,7 @@ public class ReservatieCliService {
         public String eindTijd;
         public String campusNaam;
         public LokaalDTO[] lokalen;
+        public int totaleCapaciteit;
     }
     private static class LokaalDTO {
         public Long id;
@@ -668,6 +678,16 @@ public class ReservatieCliService {
         public String voornaam;
         public String naam;
     }
+    private static class ReservatieAanvraagDTO {
+        public String startTijd;
+        public String eindTijd;
+        public String commentaar;
 
+        public ReservatieAanvraagDTO(String startTijd, String eindTijd, String commentaar) {
+            this.startTijd = startTijd;
+            this.eindTijd = eindTijd;
+            this.commentaar = commentaar;
+        }
+    }
 
 }
