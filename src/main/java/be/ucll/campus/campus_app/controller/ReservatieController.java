@@ -12,6 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.stream.Collectors;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+
 
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +33,15 @@ public class ReservatieController {
         this.reservatieService = reservatieService;
     }
 
-    @Operation(summary = "Voeg een lokaal toe aan een bestaande reservatie")
+    @Operation(
+            summary = "Voegt een lokaal toe aan een bestaande reservatie",
+            description = "Voegt een extra lokaal toe aan een reservatie als deze nog beschikbaar is binnen het tijdsinterval."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lokaal succesvol toegevoegd aan reservatie"),
+            @ApiResponse(responseCode = "404", description = "Reservatie, gebruiker of lokaal niet gevonden"),
+            @ApiResponse(responseCode = "400", description = "Lokaal reeds gekoppeld of overlapt met bestaande reservatie")
+    })
     @PutMapping("/user/{userId}/reservations/{reservatieId}/rooms/{roomId}")
     public ResponseEntity<ReservatieDTO> voegLokaalToeAanReservatie(
             @PathVariable Long userId,
@@ -43,7 +55,14 @@ public class ReservatieController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Toon reservaties voor een specifiek lokaal binnen een campus")
+    @Operation(
+            summary = "Toont reservaties voor een lokaal",
+            description = "Haalt alle reservaties op voor een specifiek lokaal binnen een opgegeven campus"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reservaties succesvol opgehaald"),
+            @ApiResponse(responseCode = "404", description = "Lokaal of campus niet gevonden")
+    })
     @GetMapping("/campus/{campusNaam}/rooms/{roomId}/reservations")
     public ResponseEntity<List<ReservatieDTO>> getReservatiesVoorLokaal(
             @PathVariable String campusNaam,
@@ -57,6 +76,8 @@ public class ReservatieController {
         return ResponseEntity.ok(dtos);
     }
 
+    @Operation(summary = "Alle reservaties ophalen")
+    @ApiResponse(responseCode = "200", description = "Lijst van reservaties opgehaald")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ReservatieDTO>> getAllReservaties() {
         List<ReservatieDTO> reservatieDTOS = reservatieService.getAllReservaties() // Zorg dat dit List<Reservatie> is
@@ -67,7 +88,11 @@ public class ReservatieController {
         return ResponseEntity.ok(reservatieDTOS);
     }
 
-
+    @Operation(summary = "Reservatie op ID ophalen")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reservatie gevonden"),
+            @ApiResponse(responseCode = "404", description = "Reservatie niet gevonden")
+    })
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ReservatieDTO> getReservatieById(@PathVariable Long id) {
         return reservatieService.getReservatieById(id)
@@ -76,6 +101,11 @@ public class ReservatieController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "Reservaties van een gebruiker ophalen")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lijst van reservaties opgehaald"),
+            @ApiResponse(responseCode = "404", description = "Gebruiker niet gevonden")
+    })
     @GetMapping(value = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ReservatieDTO>> getReservatiesByUser(@PathVariable Long userId) {
         List<ReservatieDTO> dtos = reservatieService.getReservatiesByUserId(userId).stream()
@@ -85,6 +115,11 @@ public class ReservatieController {
         return ResponseEntity.ok(dtos);
     }
 
+    @Operation(summary = "Nieuwe reservatie aanmaken")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reservatie succesvol aangemaakt"),
+            @ApiResponse(responseCode = "400", description = "Inputdata ongeldig of tijd in het verleden")
+    })
     @PostMapping(value = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ReservatieDTO> addReservatie(@PathVariable Long userId,
                                                        @RequestBody ReservatieRequestDTO dto,
@@ -99,12 +134,22 @@ public class ReservatieController {
         return ResponseEntity.ok(ReservatieDTO.fromReservatie(nieuweReservatie));
     }
 
+    @Operation(summary = "Reservatie verwijderen")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Reservatie verwijderd"),
+            @ApiResponse(responseCode = "404", description = "Reservatie niet gevonden")
+    })
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> deleteReservatie(@PathVariable Long id) {
         reservatieService.deleteReservatie(id);
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+            summary = "Beschikbare lokalen opvragen",
+            description = "Geeft een lijst van beschikbare lokalen binnen een campus en tijdsinterval. Kan filteren op minimumcapaciteit en reservatie-uitbreiding."
+    )
+    @ApiResponse(responseCode = "200", description = "Beschikbare lokalen succesvol opgehaald")
     @GetMapping("/beschikbare-lokalen")
     public ResponseEntity<List<LokaalDTO>> getBeschikbareLokalen(
             @RequestParam String campusNaam,
@@ -119,6 +164,12 @@ public class ReservatieController {
         return ResponseEntity.ok(result);
 
     }
+
+    @Operation(
+            summary = "Reservaties voor een campus opvragen",
+            description = "Geeft alle reservaties binnen een bepaalde campus"
+    )
+    @ApiResponse(responseCode = "200", description = "Reservaties succesvol opgehaald")
     @GetMapping(value = "/per-lokaal-campus", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ReservatieDTO>> getReservatiesVoorCampus(@RequestParam String campusNaam) {
         List<Reservatie> reservaties = reservatieService.getReservatiesVoorCampus(campusNaam);

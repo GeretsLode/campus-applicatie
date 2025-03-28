@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.Profile;
 
 @SpringBootApplication
 @ComponentScan("be.ucll.campus.campus_app")
@@ -17,12 +17,8 @@ public class CampusAppApplication {
 	}
 
 	@Bean
-	CommandLineRunner cliRunner(CliService cliService, Environment env) {
-		return args -> {
-			// CLI alleen starten als het actieve profiel niet "test" is
-			if (!env.acceptsProfiles("test")) {
-				cliService.start();
-			}
-		};
+	@Profile("cli") // Alleen uitvoeren in profiel "cli"
+	CommandLineRunner cliRunner(CliService cliService) {
+		return args -> cliService.start();
 	}
 }
