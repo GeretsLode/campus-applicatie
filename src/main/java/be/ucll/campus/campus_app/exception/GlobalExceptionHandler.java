@@ -1,5 +1,6 @@
 package be.ucll.campus.campus_app.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 /**
  * Globale foutafhandeling met gedetailleerde statuscodes
  */
@@ -67,5 +70,54 @@ public class GlobalExceptionHandler {
         response.put("error", "Interne serverfout");
         response.put("message", "Er is een onverwachte fout opgetreden.");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    /**
+     * 400 - Ongeldige reservatie (bijv. in het verleden, overlap, verkeerde volgorde)
+     */
+    @ExceptionHandler(InvalidReservationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Map<String, String>> handleInvalidReservation(InvalidReservationException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Ongeldige reservatie");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * 400 - Ongeldige gebruiker
+     */
+    @ExceptionHandler(InvalidUserException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Map<String, String>> handleInvalidUser(InvalidUserException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Ongeldige gebruiker");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * 400 - Algemene NullPointer (bij ontbrekende verplichte data)
+     */
+    @ExceptionHandler(NullPointerException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Map<String, String>> handleNullPointer(NullPointerException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Ongeldige input");
+        response.put("message", "Verplichte gegevens ontbreken of zijn null.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * 400 - alle validatiefouten op die gegooid worden door annotaties zoals @NotNull, @FutureOrPresent, @Size, ...
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, String>> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Validatiefout");
+        response.put("message", ex.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                .collect(Collectors.joining("; ")));
+        return ResponseEntity.badRequest().body(response);
     }
 }

@@ -81,7 +81,7 @@ public class CampusCliService {
                     .block();
 
             if (campussen == null || campussen.isEmpty()) {
-                System.out.println("⚠️ Geen campussen gevonden.");
+                System.out.println("Geen campussen gevonden.");
                 return;
             }
 
@@ -93,7 +93,7 @@ public class CampusCliService {
 
             boolean geldig = campussen.stream().anyMatch(c -> c.naam.equalsIgnoreCase(campusNaam));
             if (!geldig) {
-                System.out.println("❌ Ongeldige campusnaam.");
+                System.out.println("Ongeldige campusnaam.");
                 return;
             }
 
@@ -109,11 +109,11 @@ public class CampusCliService {
                 System.out.printf("- Naam: %s%n- Adres: %s%n- Parkeerplaatsen: %d%n",
                         campus.naam, campus.adres, campus.parkeerplaatsen);
             } else {
-                System.out.println("⚠️ Campus niet gevonden.");
+                System.out.println("Campus niet gevonden.");
             }
 
         } catch (Exception e) {
-            System.out.println("❌ Fout bij ophalen van campus: " + e.getMessage());
+            System.out.println("Fout bij ophalen van campus: " + e.getMessage());
         }
     }
 
@@ -133,27 +133,27 @@ public class CampusCliService {
             String naam = scanner.nextLine().trim();
 
             if (naam.isEmpty()) {
-                System.out.println("❌ Naam mag niet leeg zijn.");
+                System.out.println("Naam mag niet leeg zijn.");
                 return;
             }
 
             boolean bestaatAl = bestaande != null && bestaande.stream().anyMatch(c -> c.naam.equalsIgnoreCase(naam));
             if (bestaatAl) {
-                System.out.println("❌ Er bestaat al een campus met deze naam.");
+                System.out.println("Er bestaat al een campus met deze naam.");
                 return;
             }
 
             System.out.print("Geef het adres van de campus: ");
             String adres = scanner.nextLine().trim();
             if (adres.isEmpty()) {
-                System.out.println("❌ Adres mag niet leeg zijn.");
+                System.out.println("Adres mag niet leeg zijn.");
                 return;
             }
 
             System.out.print("Geef het aantal parkeerplaatsen: ");
             int parkeerplaatsen = Integer.parseInt(scanner.nextLine().trim());
             if (parkeerplaatsen < 0) {
-                System.out.println("❌ Parkeerplaatsen moeten positief zijn.");
+                System.out.println("Parkeerplaatsen moeten positief zijn.");
                 return;
             }
 
@@ -163,19 +163,23 @@ public class CampusCliService {
                     .uri("/campus")
                     .bodyValue(nieuweCampus)
                     .retrieve()
+                    .onStatus(
+                            status -> status.is4xxClientError() || status.is5xxServerError(),
+                            r -> r.bodyToMono(String.class).map(Exception::new)
+                    )
                     .bodyToMono(Campus.class)
                     .block();
 
             if (response != null) {
-                System.out.println("✅ Campus succesvol toegevoegd: " + response.getNaam());
+                System.out.println("Campus succesvol toegevoegd: " + response.getNaam());
             } else {
-                System.out.println("❌ Fout bij het toevoegen van de campus.");
+                System.out.println("Fout bij het toevoegen van de campus.");
             }
 
         } catch (NumberFormatException e) {
-            System.out.println("❌ Ongeldig aantal parkeerplaatsen.");
+            System.out.println("Ongeldig aantal parkeerplaatsen.");
         } catch (Exception e) {
-            System.out.println("❌ Fout bij toevoegen van campus: " + e.getMessage());
+            System.out.println("Fout bij toevoegen van campus: " + e.getMessage());
         }
     }
     private void deleteCampus(Scanner scanner) {
@@ -187,7 +191,7 @@ public class CampusCliService {
                     .block();
 
             if (campussen == null || campussen.length == 0) {
-                System.out.println("⚠️ Geen campussen beschikbaar.");
+                System.out.println("Geen campussen beschikbaar.");
                 return;
             }
 
@@ -200,25 +204,31 @@ public class CampusCliService {
             int keuze = Integer.parseInt(scanner.nextLine().trim());
 
             if (keuze < 1 || keuze > campussen.length) {
-                System.out.println("❌ Ongeldige keuze.");
+                System.out.println("Ongeldige keuze.");
                 return;
             }
 
             String naam = campussen[keuze - 1].naam;
 
             webClient.delete()
-                    .uri("/campussen/" + naam)
+                    .uri("/campus/" + naam)
                     .retrieve()
+                    .onStatus(
+                            status -> status.is4xxClientError() || status.is5xxServerError(),
+                            r -> r.bodyToMono(String.class).map(Exception::new)
+                    )
                     .toBodilessEntity()
                     .block();
 
-            System.out.println("✅ Campus '" + naam + "' werd verwijderd.");
+            System.out.println("Campus '" + naam + "' werd verwijderd.");
         } catch (WebClientResponseException e) {
             if (e.getStatusCode().value() == 409) {
-                System.out.println("❌ Deze campus kan niet verwijderd worden omdat ze nog lokalen of reservaties bevat.");
+                System.out.println("Deze campus kan niet verwijderd worden omdat ze nog lokalen of reservaties bevat.");
             } else {
                 System.out.println("Fout bij verwijderen van campus: " + e.getMessage());
             }
+        } catch (NumberFormatException e) {
+            System.out.println("Ongeldige keuze, geef een nummer.");
         } catch (Exception e) {
             System.out.println("Onverwachte fout: " + e.getMessage());
         }

@@ -215,26 +215,33 @@ public class ReservatieCliService {
                 return;
             }
 
-            // === 6. Reservatie aanmaken ===
             ReservatieAanvraagDTO aanvraag = new ReservatieAanvraagDTO(start, eind, commentaar);
 
-            Optional<String> response = Optional.ofNullable(webClient.post()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/reservaties/user/" + userId)
-                            .queryParam("lokaalIds", lokaalIds.stream()
-                                    .map(String::valueOf)
-                                    .collect(Collectors.joining(",")))
-                            .build())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(aanvraag)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block());
+            // === 6. Reservatie verzenden ===
+            try {
+                String response = webClient.post()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/reservaties/user/" + userId)
+                                .queryParam("lokaalIds", lokaalIds.stream()
+                                        .map(String::valueOf)
+                                        .collect(Collectors.joining(",")))
+                                .build())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(aanvraag)
+                        .retrieve()
+                        .onStatus(
+                                status -> status.is4xxClientError() || status.is5xxServerError(),
+                                r -> r.bodyToMono(String.class).map(Exception::new)
+                        )
+                        .bodyToMono(String.class)
+                        .block();
 
-            response.ifPresentOrElse(
-                    res -> System.out.println("Reservatie toegevoegd: " + res),
-                    () -> System.out.println("Fout bij toevoegen van reservatie.")
-            );
+                System.out.println("Reservatie toegevoegd: " + response);
+
+            } catch (Exception e) {
+                System.out.println("Fout bij toevoegen van reservatie: " + e.getMessage());
+            }
+
 
         } catch (Exception e) {
             System.out.println("Fout: " + e.getMessage());

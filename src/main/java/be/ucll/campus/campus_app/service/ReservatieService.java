@@ -110,7 +110,7 @@ public class ReservatieService {
     @Transactional
     public void deleteReservatie(Long id) {
         if (!reservatieRepository.existsById(id)) {
-            throw new IllegalArgumentException("Reservatie niet gevonden");
+            throw new InvalidReservationException("Reservatie niet gevonden.");
         }
         Reservatie reservatie = reservatieRepository.findById(id)
                 .orElseThrow(() -> new InvalidReservationException("Reservatie niet gevonden"));
@@ -123,8 +123,14 @@ public class ReservatieService {
         reservatieRepository.deleteById(id);
     }
     public List<LokaalDTO> findBeschikbareLokalen(String campusNaam, String startStr, String eindStr, Integer minPersonen) {
-        LocalDateTime start = LocalDateTime.parse(startStr.trim(), FORMATTER);
-        LocalDateTime eind = LocalDateTime.parse(eindStr.trim(), FORMATTER);
+        LocalDateTime start, eind;
+        try {
+            start = LocalDateTime.parse(startStr.trim(), FORMATTER);
+            eind = LocalDateTime.parse(eindStr.trim(), FORMATTER);
+        } catch (DateTimeParseException e) {
+            throw new InvalidReservationException("Ongeldig datumformaat bij ophalen beschikbare lokalen.");
+        }
+
 
         return lokaalRepository.findByCampusNaam(campusNaam).stream()
                 .filter(l -> minPersonen == null || l.getCapaciteit() >= minPersonen)
@@ -134,8 +140,13 @@ public class ReservatieService {
     }
 
     public List<LokaalDTO> findBeschikbareLokalen(String campusNaam, String startStr, String eindStr, Integer minPersonen, Long reservatieId) {
-        LocalDateTime start = LocalDateTime.parse(startStr.trim(), FORMATTER);
-        LocalDateTime eind = LocalDateTime.parse(eindStr.trim(), FORMATTER);
+        LocalDateTime start, eind;
+        try {
+            start = LocalDateTime.parse(startStr.trim(), FORMATTER);
+            eind = LocalDateTime.parse(eindStr.trim(), FORMATTER);
+        } catch (DateTimeParseException e) {
+            throw new InvalidReservationException("Ongeldig datumformaat bij ophalen beschikbare lokalen.");
+        }
 
         Reservatie reservatie = reservatieRepository.findById(reservatieId)
                 .orElseThrow(() -> new InvalidReservationException("Reservatie niet gevonden"));
@@ -151,7 +162,6 @@ public class ReservatieService {
                 .map(LokaalDTO::fromLokaal)
                 .toList();
     }
-
 
 
     @Transactional
